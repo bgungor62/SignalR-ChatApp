@@ -1,0 +1,76 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">SOHBET UYGULAMASI</h1>
+    <div class="container">
+        <div class="row">
+            <div class="col-4">
+                <input type="text" class="form-control" placeholder="Adınızı Giriniz" id="userName"/>
+                                </br>
+                <input type="text" class="form-control" placeholder="Mesajınızı Giriniz" id="message"/>
+                             </br>
+                <button id="btnSendMessage" class="btn btn-primary" type="button">Gönder</button>    
+            </div>
+            <div class="col-8">
+                <ul class="list-group" id="messages"></ul>
+             </div>
+            </div>
+         </div>   
+    </div>
+</div>
+
+<!--layoutun içinden geliyor-->
+@section Scripts
+{
+    
+    <script>
+    const connection=new signalR.HubConnectionBuilder() //bağlantımı oluşturuyorum bu nesne signalr/signalr.js'den geliyor
+    .withUrl("/chatHub") //program.cs içerisindeki map'i yazıyoruz
+    .configureLogging(signalR.LogLevel.Information)
+    .build();
+
+        async function start(){ //chat huba bağlanmak için start yazıyoruz fonksiyonu yazıyoruz 
+            try{
+            
+            await connection.start();
+            console.log("Bağlandı"); //bağlandığına dair konrol mesajı veriyoruz
+
+            }
+
+            catch(err){
+                console.error(err);
+                setTimeout(start,5000); //eğer bir pronlem çıkarsa zaman aralığında tekrar çalıştır.
+
+            }
+        }
+        connection.onclose(async()=>{
+            
+            await start();
+        });
+
+        start();
+        $('#btnSendMessage').click(function(){
+            try{
+                var mesajIcerik=$('#message').val(); //inputlarımızın id'sini gönderiyoruz
+                var kullaniciAdi=$('#userName').val();
+                connection.invoke("SendMessage",kullaniciAdi,mesajIcerik); <!-- invoke ile chathub daki fonksiyonu çağırmış olduk -->
+                //kullanici adı ile mesajıcerik ile mesajımızı gönderiyoruz
+
+            }catch(err){    
+                console.log(err);
+            }
+        });
+//ready fonskiyon ile dinle kısımını yazıyoruz 
+        $().ready(function(){
+            connection.on("ReceiveMessage",(user,Message)=>{ //user ve message ile parametreleri gönderiuorum
+                console.log(user,Message);
+                $('#messages').append(     <!-- Lİstemizin içine gelen mesajları kaydettik -->
+                    `<li class="list-group-item" style="color:red">${user}: ${Message}</li>`
+                );
+            });
+        });
+
+    </script>
+ }
